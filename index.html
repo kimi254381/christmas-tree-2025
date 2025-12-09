@@ -73,20 +73,24 @@
         /* Mobile Optimization */
         @media (max-width: 768px) {
             h1 {
-                font-size: 32px !important; /* 缩小标题 */
-                margin-top: 60px;
+                font-size: 32px !important;
+                /* 标题下移，给徽章留出空间 */
+                margin-top: 80px; 
                 letter-spacing: 2px;
             }
 
             .badge {
-                top: 20px;
+                /* 适配刘海屏，增加基础偏移 */
+                top: calc(10px + env(safe-area-inset-top)); 
                 right: 20px;
                 padding-right: 10px;
                 border-right-width: 2px;
+                /* 确保徽章在最上层且不被遮挡 */
+                z-index: 999; 
             }
 
             .badge-en { font-size: 10px; }
-            .badge-cn { font-size: 18px; }
+            .badge-cn { font-size: 16px; } /* 稍微改小一点中文，防止换行 */
             .badge-year { font-size: 8px; }
 
             .upload-wrapper {
@@ -255,7 +259,7 @@
                 <button class="glass-btn" id="btn-tree" style="padding: 8px 20px; font-size: 14px;">Assemble</button>
             </div>
 
-            <span class="hint-text">Press 'H' / Tap to Hide • Space to Toggle</span>
+            <span class="hint-text" id="hint-text">Press 'H' to Hide • Space to Toggle</span>
         </div>
     </div>
 
@@ -784,6 +788,12 @@
 
             initInputs() {
                 const uiLayer = document.getElementById('ui-layer');
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+                // Update Hint Text for Mobile
+                if (isMobile) {
+                    document.getElementById('hint-text').textContent = "Tap background to hide UI";
+                }
 
                 // Mode Buttons
                 document.getElementById('btn-scatter').addEventListener('click', (e) => {
@@ -991,6 +1001,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
