@@ -704,20 +704,20 @@
                     addParticle(mesh, 'dust');
                 }
 
-                // 3. Background Stars (New Layer)
-                // 在极远处添加微弱的星光，增加空间深度
+                // 3. Background Stars (Simple & Safe)
+                // 使用简单的 PointsMaterial，兼容 WebGL 1
                 const starGeo = new THREE.BufferGeometry();
-                const starCount = 1000;
+                const starCount = 2000; // 增加到 2000 颗
                 const starPos = new Float32Array(starCount * 3);
                 for(let i=0; i<starCount * 3; i++) {
-                    starPos[i] = (Math.random() - 0.5) * 200; // 范围更大
+                    starPos[i] = (Math.random() - 0.5) * 250; // 范围更大
                 }
                 starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
                 const starMat = new THREE.PointsMaterial({
-                    color: 0x667788, // 冷色调星光
-                    size: 0.2,
+                    color: 0xffffff, // 纯白色，更亮
+                    size: 0.4, // 增大尺寸 (0.2 -> 0.4)
                     transparent: true,
-                    opacity: 0.6,
+                    opacity: 0.8, // 提高不透明度 (0.6 -> 0.8)
                     sizeAttenuation: true
                 });
                 const starField = new THREE.Points(starGeo, starMat);
@@ -1001,7 +1001,6 @@
     </script>
 </body>
 </html>
-
 
 
 
