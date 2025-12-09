@@ -67,6 +67,42 @@
             border-right: 3px solid var(--gold);
             padding-right: 15px;
             pointer-events: auto;
+            z-index: 20; /* 确保在最上层 */
+        }
+
+        /* Mobile Optimization */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 32px !important; /* 缩小标题 */
+                margin-top: 60px;
+                letter-spacing: 2px;
+            }
+
+            .badge {
+                top: 20px;
+                right: 20px;
+                padding-right: 10px;
+                border-right-width: 2px;
+            }
+
+            .badge-en { font-size: 10px; }
+            .badge-cn { font-size: 18px; }
+            .badge-year { font-size: 8px; }
+
+            .upload-wrapper {
+                bottom: 40px;
+                width: 90%; /* 更宽的点击区域 */
+            }
+
+            .glass-btn {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            
+            .hint-text {
+                font-size: 10px;
+                opacity: 0.8; /* 手机上稍微亮一点 */
+            }
         }
 
         .badge-en {
@@ -219,7 +255,7 @@
                 <button class="glass-btn" id="btn-tree" style="padding: 8px 20px; font-size: 14px;">Assemble</button>
             </div>
 
-            <span class="hint-text">Press 'H' to Hide • Space to Toggle</span>
+            <span class="hint-text">Press 'H' / Tap to Hide • Space to Toggle</span>
         </div>
     </div>
 
@@ -545,37 +581,49 @@
                 const sphereGeo = new THREE.SphereGeometry(0.3, 64, 64); // 提升球体精度
                 const caneGeo = this.createCandyCaneGeo();
 
-                // Materials - Ultra Luxury (Softened)
-                // 1. 碎钻金：柔和磨砂质感
-                const matGold = new THREE.MeshPhysicalMaterial({ 
+                // Materials - Safe Fallback
+                // 在 WebGL 1 下使用 StandardMaterial，防止 PhysicalMaterial 报错
+                const MatClass = this.isWebGL2 ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
+                
+                // 1. 碎钻金
+                const matGold = new MatClass({ 
                     color: 0xffd700, 
-                    emissive: 0x221100, // 降低自发光 (0x443300 -> 0x221100)
-                    roughness: 0.25,  // 增加粗糙度 (0.1 -> 0.25)，不刺眼
+                    emissive: 0x221100, 
+                    roughness: 0.25,  
                     metalness: 1.0,  
-                    clearcoat: 0.5,  // 降低清漆层 (1.0 -> 0.5)
-                    clearcoatRoughness: 0.1,
-                    reflectivity: 0.8,
-                    envMapIntensity: 1.5 // 大幅降低反射 (4.0 -> 1.5)
+                    // WebGL 1 忽略这些属性
+                    ...(this.isWebGL2 ? {
+                        clearcoat: 0.5,
+                        clearcoatRoughness: 0.1,
+                        reflectivity: 0.8,
+                        envMapIntensity: 1.5
+                    } : {
+                        envMapIntensity: 1.0 // 降低反射
+                    })
                 });
                 
-                // 2. 祖母绿：深邃宝石感
-                const matGreen = new THREE.MeshPhysicalMaterial({ 
+                // 2. 祖母绿
+                const matGreen = new MatClass({ 
                     color: 0x003311, 
-                    roughness: 0.3, // 稍微粗糙一点
+                    roughness: 0.3, 
                     metalness: 0.2, 
-                    transmission: 0.1, 
-                    thickness: 1.0,
-                    clearcoat: 0.5,
-                    envMapIntensity: 1.0 // 降低反射 (2.0 -> 1.0)
+                    ...(this.isWebGL2 ? {
+                        transmission: 0.1, 
+                        thickness: 1.0,
+                        clearcoat: 0.5,
+                        envMapIntensity: 1.0
+                    } : {})
                 });
                 
                 // 3. 红宝石
-                const matRed = new THREE.MeshPhysicalMaterial({ 
+                const matRed = new MatClass({ 
                     color: 0x880000, 
                     metalness: 0.0, 
                     roughness: 0.1, 
-                    clearcoat: 1.0, 
-                    envMapIntensity: 2.0
+                    ...(this.isWebGL2 ? {
+                        clearcoat: 1.0, 
+                        envMapIntensity: 2.0
+                    } : {})
                 });
 
                 const matCane = new THREE.MeshStandardMaterial({ 
@@ -735,12 +783,37 @@
             }
 
             initInputs() {
+                const uiLayer = document.getElementById('ui-layer');
+
                 // Mode Buttons
-                document.getElementById('btn-scatter').addEventListener('click', () => {
+                document.getElementById('btn-scatter').addEventListener('click', (e) => {
+                    e.stopPropagation(); // 防止触发背景点击
                     STATE.mode = 'SCATTER';
                 });
-                document.getElementById('btn-tree').addEventListener('click', () => {
+                document.getElementById('btn-tree').addEventListener('click', (e) => {
+                    e.stopPropagation();
                     STATE.mode = 'TREE';
+                });
+                
+                // Add Memories Button Stop Propagation
+                document.querySelector('.upload-wrapper button').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+
+                // Touch / Click on Background to Toggle UI
+                // 使用 renderer 的 domElement 来监听点击，避免点到 UI 按钮
+                this.renderer.domElement.addEventListener('pointerdown', (e) => {
+                    // 简单的点击判定，如果是拖动旋转则不触发
+                    this.isDragging = false;
+                    this.clickStartX = e.clientX;
+                    this.clickStartY = e.clientY;
+                });
+
+                this.renderer.domElement.addEventListener('pointerup', (e) => {
+                    const dist = Math.hypot(e.clientX - this.clickStartX, e.clientY - this.clickStartY);
+                    if (dist < 5) { // 视为点击
+                        uiLayer.classList.toggle('ui-hidden');
+                    }
                 });
 
                 // Keyboard Shortcuts
@@ -918,4 +991,7 @@
     </script>
 </body>
 </html>
+
+
+
 
